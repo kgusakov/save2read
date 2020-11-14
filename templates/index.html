@@ -1,0 +1,12 @@
+<html>
+    <head>
+        <title>{{ app_name }}</title>
+    </head>
+    <body>
+        <ul>
+            {% for link in links %}
+            <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
+            {% endfor %}
+        </ul>
+    </body>
+</html>
