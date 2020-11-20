@@ -5,6 +5,7 @@ use url::Url;
 use std::sync::Mutex;
 use askama::Template;
 use storage::Storage;
+use sqlx::sqlite::SqlitePoolOptions;
 
 struct AppState {
     storage: Mutex<Storage>
@@ -50,8 +51,9 @@ async fn manual_hello() -> impl Responder {
 async fn main() -> std::io::Result<()> {
 
 
+    let db_pool = SqlitePoolOptions::new().connect("sqlite:/tmp/sqlite.db").await.unwrap();
     let app_state = web::Data::new(AppState {
-        storage: Mutex::new(Storage::new())
+        storage: Mutex::new(Storage::new(db_pool).await)
     });
 
     HttpServer::new(move || {
