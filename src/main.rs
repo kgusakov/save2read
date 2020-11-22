@@ -8,7 +8,7 @@ use storage::Storage;
 use sqlx::sqlite::SqlitePoolOptions;
 
 struct AppState {
-    storage: Mutex<Storage>
+    storage: Storage
 }
 
 #[derive(Template)] // this will generate the code...
@@ -22,12 +22,13 @@ struct ListTemplate<'a> { // the name of the struct can be anything
 
 #[get("/list/{user_id}")]
 async fn list(web::Path(user_id): web::Path<String>, data: web::Data<AppState>) -> impl Responder {
-    let d = data.storage.lock().unwrap();
-    let links = d.pending_list(user_id)
+    let d = &data.storage;
+    let links = d.pending_list(&user_id)
         .await
-        .iter()
-        .map(|url| url.to_string())
-        .collect::<Vec<String>>();
+        .unwrap()
+        .into_iter()
+        .map(|url| url.as_str().to_string())
+        .collect();
 
     HttpResponse::Ok().body(
         ListTemplate {
@@ -38,8 +39,9 @@ async fn list(web::Path(user_id): web::Path<String>, data: web::Data<AppState>) 
 
 #[post("/add/{user_id}")]
 async fn add(request: web::Bytes, web::Path(user_id): web::Path<String>,  data: web::Data<AppState>)  -> impl Responder {
-    let mut d = data.storage.lock().unwrap();
-    d.add(&user_id, Url::parse(&String::from_utf8(request.to_vec()).unwrap()).unwrap()).await;
+    let d = &data.storage;
+    println!("{}", &String::from_utf8(request.to_vec()).unwrap());
+    d.add(&user_id, Url::parse(&String::from_utf8(request.to_vec()).unwrap()).unwrap()).await.unwrap();
     HttpResponse::Ok().body("Added!")
 }
 
@@ -53,7 +55,7 @@ async fn main() -> std::io::Result<()> {
 
     let db_pool = SqlitePoolOptions::new().connect("sqlite:/tmp/sqlite.db").await.unwrap();
     let app_state = web::Data::new(AppState {
-        storage: Mutex::new(Storage::new(db_pool).await)
+        storage: Storage::init(db_pool).await.unwrap()
     });
 
     HttpServer::new(move || {

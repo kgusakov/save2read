@@ -3,10 +3,16 @@
         <title>{{ app_name }}</title>
     </head>
     <body>
-        <ul>
-            {% for link in links %}
-            <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
-            {% endfor %}
-        </ul>
+        <script src="https://unpkg.com/htmx.org@0.4.0"></script>
+        <input type="text" name="q" 
+          hx-post="/add/1" 
+          hx-target="#links-list"/>
+        <div id="links-list">
+            <ul>
+                {% for link in links %}
+                <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
     </body>
 </html>
