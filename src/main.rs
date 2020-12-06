@@ -1,70 +1,96 @@
+mod extractor;
+mod routes;
 mod storage;
+mod telegram_api;
 
-use actix_web::{get, post, web, App, HttpResponse, HttpRequest, HttpServer, Responder};
-use url::Url;
-use std::sync::Mutex;
-use askama::Template;
-use storage::Storage;
+use actix_web::client::Client;
+use actix_web::{web, App, HttpServer};
+use extractor::*;
+use handlebars::Handlebars;
+use log::error;
+use routes::*;
 use sqlx::sqlite::SqlitePoolOptions;
-
-struct AppState {
-    storage: Storage
-}
-
-#[derive(Template)] // this will generate the code...
-#[template(path = "index.html")] // using the template in this path, relative
-                                 // to the `templates` dir in the crate root
-struct ListTemplate<'a> { // the name of the struct can be anything
-    app_name: &'a str,
-    links: &'a Vec<String>
-}
-
-
-#[get("/list/{user_id}")]
-async fn list(web::Path(user_id): web::Path<String>, data: web::Data<AppState>) -> impl Responder {
-    let d = &data.storage;
-    let links = d.pending_list(&user_id)
-        .await
-        .unwrap()
-        .into_iter()
-        .map(|url| url.as_str().to_string())
-        .collect();
-
-    HttpResponse::Ok().body(
-        ListTemplate {
-            app_name: "Save For Read",
-            links: &links
-        }.render().unwrap())
-}
-
-#[post("/add/{user_id}")]
-async fn add(request: web::Bytes, web::Path(user_id): web::Path<String>,  data: web::Data<AppState>)  -> impl Responder {
-    let d = &data.storage;
-    println!("{}", &String::from_utf8(request.to_vec()).unwrap());
-    d.add(&user_id, Url::parse(&String::from_utf8(request.to_vec()).unwrap()).unwrap()).await.unwrap();
-    HttpResponse::Ok().body("Added!")
-}
-
-async fn manual_hello() -> impl Responder {
-    HttpResponse::Ok().body("Hey there!")
-}
+use std::sync::Arc;
+use storage::Storage;
+use telegram_api::SendMessage;
+use url::Url;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
 
+    let mut handlebars = Handlebars::new();
+    handlebars
+        .register_templates_directory(".html", "./templates")
+        .unwrap();
+    let handlebars_ref = Arc::new(handlebars);
 
-    let db_pool = SqlitePoolOptions::new().connect("sqlite:/tmp/sqlite.db").await.unwrap();
+    let db_pool = SqlitePoolOptions::new()
+        .connect("sqlite:/tmp/sqlite.db")
+        .await
+        .unwrap();
+    let storage = Arc::new(Storage::init(db_pool).await.unwrap());
+
+    let st = storage.clone();
+    actix_rt::spawn(async move {
+        update_loop(&st).await;
+    });
+
+    let st1 = storage.clone();
     let app_state = web::Data::new(AppState {
-        storage: Storage::init(db_pool).await.unwrap()
+        storage: st1,
+        hb: handlebars_ref.clone(),
     });
 
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
-            .service(list)
-            .service(add)
+            .service(pending_list)
+            .service(archived_list)
+            .service(archive)
     })
-    .bind("127.0.0.1:8080")?
+    .bind("192.168.1.83:8080")?
     .run()
     .await
+}
+
+async fn update_loop(storage: &Storage) {
+    let client = Client::default();
+    let api_token = std::env::var("BOT_TOKEN").expect("Provide telegram api token pls");
+    let telegram_api = telegram_api::TelegramClient::new(api_token, &client);
+    let mut update_id = -1;
+    loop {
+        match telegram_api.get_updates(update_id + 1).await {
+            Ok(updates) => {
+                for update in updates.result {
+                    update_id = update.update_id;
+                    match update.message.text {
+                        Some(t) => match Url::parse(&t) {
+                            Ok(url) => match storage
+                                .add(update.message.chat.id, &url, extract(&url).await.unwrap())
+                                .await
+                            {
+                                Ok(()) => {
+                                    let send_result = telegram_api
+                                        .async_send_message(SendMessage {
+                                            chat_id: format!("{}", update.message.chat.id),
+                                            text: format!("{}", update.message.chat.id),
+                                            reply_to_message_id: None,
+                                        })
+                                        .await;
+                                    if let Err(e) = send_result {
+                                        error!("{}", e);
+                                    };
+                                }
+                                Err(err) => error!("{}", err),
+                            },
+                            _ => (),
+                        },
+                        _ => (),
+                    }
+                }
+            }
+            Err(err) => error!("{}", err),
+        }
+    }
 }
