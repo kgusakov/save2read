@@ -16,6 +16,7 @@ struct ListTemplate<'a> {
     app_name: &'a str,
     links: Vec<(String, String, Option<String>)>,
     user_id: &'a str,
+    page: &'a str,
 }
 
 #[get("/pending/{user_id}")]
@@ -34,7 +35,8 @@ pub async fn pending_list(
     let json = json!(ListTemplate {
         app_name: "Save For Read",
         links: links,
-        user_id: &user_id
+        user_id: &user_id,
+        page: "pending"
     });
     let rendered = &data.hb.render("index", &json).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -56,7 +58,8 @@ pub async fn archived_list(
     let json = json!(ListTemplate {
         app_name: "Save For Read",
         links: links,
-        user_id: &user_id
+        user_id: &user_id,
+        page: "archived"
     });
     let rendered = &data.hb.render("index", &json).unwrap();
     HttpResponse::Ok().body(rendered)
@@ -69,5 +72,25 @@ pub async fn archive(
 ) -> impl Responder {
     let d = &data.storage;
     d.archive(&link_id).await.unwrap();
+    HttpResponse::Ok()
+}
+
+#[delete("/archived/delete/{link_id}")]
+pub async fn delete_archived(
+    web::Path(link_id): web::Path<i64>,
+    data: web::Data<AppState<'_>>,
+) -> impl Responder {
+    let d = &data.storage;
+    d.delete_archived(&link_id).await.unwrap();
+    HttpResponse::Ok()
+}
+
+#[delete("/pending/delete/{link_id}")]
+pub async fn delete_pending(
+    web::Path(link_id): web::Path<i64>,
+    data: web::Data<AppState<'_>>,
+) -> impl Responder {
+    let d = &data.storage;
+    d.delete_pending(&link_id).await.unwrap();
     HttpResponse::Ok()
 }

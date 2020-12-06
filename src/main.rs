@@ -48,6 +48,8 @@ async fn main() -> std::io::Result<()> {
             .service(pending_list)
             .service(archived_list)
             .service(archive)
+            .service(delete_archived)
+            .service(delete_pending)
     })
     .bind("192.168.1.83:8080")?
     .run()

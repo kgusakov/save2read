@@ -84,6 +84,29 @@ impl Storage {
         }
     }
 
+
+    pub async fn delete_archived(&self, id: &i64) -> Result<()> {
+        query(&format!("DELETE FROM {} where id = ?", ARCHIVED_LINKS_TABLE))
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .with_context(|| {
+                format!("Can't delete the link {} from archived", id)
+            })?;
+            Ok(())
+    }
+
+    pub async fn delete_pending(&self, id: &i64) -> Result<()> {
+        query(&format!("DELETE FROM {} where id = ?", PENDING_LINKS_TABLE))
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .with_context(|| {
+                format!("Can't delete the link {} from pending", id)
+            })?;
+            Ok(())
+    }
+
     pub async fn get_url(&self, id: &i64) -> Result<Option<(i64, Url, Option<String>)>> {
         let rows: Vec<sqlx::sqlite::SqliteRow> = query(&format!(
             "SELECT user_id, url, title from {} where id = ?",
