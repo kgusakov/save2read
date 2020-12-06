@@ -1822,7 +1822,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "save4read"
+name = "save2read"
 version = "0.1.0"
 dependencies = [
  "actix-rt",
