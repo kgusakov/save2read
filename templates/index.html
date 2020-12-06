@@ -6,6 +6,13 @@
             integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
         <title>{{ app_name }}</title>
 
+        <style>
+            .card-deck {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                grid-gap: .5rem;
+            }
+        </style>
     </head>
     <body>
         <script src="https://unpkg.com/htmx.org@0.4.0"></script>

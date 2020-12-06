@@ -1,9 +1,9 @@
 
-<div class="card-columns">
+<div class="card-deck">
     {{#each links as |link|}}
     <div class="card" id="card-{{ link.0 }}">
         <div class="card-body">
-            <h5 class="card-title">{{ link.2 }}</h5>
+            <h5 class="card-title">{{ link.0 }} {{ link.2 }}</h5>
             <p class="card-text">{{ link.2 }}</p>
             <a href="{{ link.1 }}" target="_blank" class="btn btn-primary">Read</a>
             <div class="btn btn-warning" hx-swap="outerHTML" hx-target="#card-{{ link.0 }}"

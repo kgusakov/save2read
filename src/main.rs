@@ -12,8 +12,9 @@ use routes::*;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::sync::Arc;
 use storage::Storage;
-use telegram_api::SendMessage;
+use telegram_api::*;
 use url::Url;
+use anyhow::*;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -66,33 +67,28 @@ async fn update_loop(storage: &Storage) {
             Ok(updates) => {
                 for update in updates.result {
                     update_id = update.update_id;
-                    match update.message.text {
-                        Some(t) => match Url::parse(&t) {
-                            Ok(url) => match storage
-                                .add(update.message.chat.id, &url, extract(&url).await.unwrap())
-                                .await
-                            {
-                                Ok(()) => {
-                                    let send_result = telegram_api
-                                        .async_send_message(SendMessage {
-                                            chat_id: format!("{}", update.message.chat.id),
-                                            text: format!("{}", update.message.chat.id),
-                                            reply_to_message_id: None,
-                                        })
-                                        .await;
-                                    if let Err(e) = send_result {
-                                        error!("{}", e);
-                                    };
-                                }
-                                Err(err) => error!("{}", err),
-                            },
-                            _ => (),
-                        },
-                        _ => (),
+                    if let Err(e) = process_upate(&update, storage, &telegram_api).await {
+                        error!("{}", e);
                     }
                 }
             }
             Err(err) => error!("{}", err),
         }
     }
+}
+
+async fn process_upate<'a>(update: &Update, storage: &Storage, telegram_api: &TelegramClient<'a>) -> Result<()> {
+    if let Some(ref t) = update.message.text {
+        let url = Url::parse(t)?;
+        storage.add(update.message.chat.id, &url, extract(&url).await?)
+            .await?;
+        telegram_api
+            .async_send_message(SendMessage {
+                chat_id: format!("{}", update.message.chat.id),
+                text: format!("{}", update.message.chat.id),
+                reply_to_message_id: None,
+            })
+            .await?;
+    }
+    Ok(())
 }

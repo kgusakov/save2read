@@ -5,6 +5,8 @@ use serde::*;
 use serde_json::*;
 use std::sync::Arc;
 
+const APP_NAME: &str = "Save to read";
+
 pub struct AppState<'a> {
     pub storage: Arc<Storage>,
     pub hb: Arc<Handlebars<'a>>,
@@ -33,7 +35,7 @@ pub async fn pending_list(
         .map(|url| (url.0.to_string(), url.1.to_string(), url.2))
         .collect();
     let json = json!(ListTemplate {
-        app_name: "Save For Read",
+        app_name: APP_NAME,
         links: links,
         user_id: &user_id,
         page: "pending"
@@ -56,7 +58,7 @@ pub async fn archived_list(
         .map(|url| (url.0.to_string(), url.1.to_string(), url.2))
         .collect();
     let json = json!(ListTemplate {
-        app_name: "Save For Read",
+        app_name: APP_NAME,
         links: links,
         user_id: &user_id,
         page: "archived"
