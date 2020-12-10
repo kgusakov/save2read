@@ -84,16 +84,16 @@ impl Storage {
         }
     }
 
-
     pub async fn delete_archived(&self, id: &i64) -> Result<()> {
-        query(&format!("DELETE FROM {} where id = ?", ARCHIVED_LINKS_TABLE))
-            .bind(id)
-            .execute(&self.pool)
-            .await
-            .with_context(|| {
-                format!("Can't delete the link {} from archived", id)
-            })?;
-            Ok(())
+        query(&format!(
+            "DELETE FROM {} where id = ?",
+            ARCHIVED_LINKS_TABLE
+        ))
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .with_context(|| format!("Can't delete the link {} from archived", id))?;
+        Ok(())
     }
 
     pub async fn delete_pending(&self, id: &i64) -> Result<()> {
@@ -101,10 +101,8 @@ impl Storage {
             .bind(id)
             .execute(&self.pool)
             .await
-            .with_context(|| {
-                format!("Can't delete the link {} from pending", id)
-            })?;
-            Ok(())
+            .with_context(|| format!("Can't delete the link {} from pending", id))?;
+        Ok(())
     }
 
     pub async fn get_url(&self, id: &i64) -> Result<Option<(i64, Url, Option<String>)>> {
@@ -132,7 +130,7 @@ impl Storage {
         }
     }
 
-    pub async fn pending_list(&self, id: &str) -> Result<Vec<(i64, Url, Option<String>)>> {
+    pub async fn pending_list(&self, id: &i64) -> Result<Vec<(i64, Url, Option<String>)>> {
         let rows: Vec<sqlx::sqlite::SqliteRow> = query(&format!(
             "SELECT id, url, title from {} where user_id = ?",
             PENDING_LINKS_TABLE
@@ -152,7 +150,7 @@ impl Storage {
         Ok(result)
     }
 
-    pub async fn archived_list(&self, id: &str) -> Result<Vec<(i64, Url, Option<String>)>> {
+    pub async fn archived_list(&self, id: &i64) -> Result<Vec<(i64, Url, Option<String>)>> {
         let rows: Vec<sqlx::sqlite::SqliteRow> = query(&format!(
             "SELECT id, url, title from {} where user_id = ?",
             ARCHIVED_LINKS_TABLE
