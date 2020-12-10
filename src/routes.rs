@@ -1,9 +1,8 @@
 use crate::auth::TokenStorage;
 
 use super::storage::Storage;
-use actix_session::{CookieSession, Session};
+use actix_session::Session;
 use actix_web::*;
-use dev::HttpResponseBuilder;
 use handlebars::Handlebars;
 use serde::*;
 use serde_json::*;
@@ -61,30 +60,34 @@ pub async fn pending_list(
     }
 }
 
-#[get("/archived/{user_id}")]
+#[get("/archived")]
 pub async fn archived_list(
-    web::Path(user_id): web::Path<i64>,
     data: web::Data<AppState<'_>>,
+    session: Session,
 ) -> std::result::Result<HttpResponse, actix_web::error::Error> {
-    let d = &data.storage;
-    let links = d
-        .archived_list(&user_id)
-        .await
-        .map_err(|e| actix_web::error::ErrorInternalServerError(e))?
-        .into_iter()
-        .map(|url| (url.0.to_string(), url.1.to_string(), url.2))
-        .collect();
-    let json = json!(ListTemplate {
-        app_name: APP_NAME,
-        links: links,
-        user_id: user_id,
-        page: "archived"
-    });
-    let rendered = &data
-        .hb
-        .render("index", &json)
-        .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
-    Ok(HttpResponse::Ok().body(rendered))
+    if let Some(user_id) = session.get::<UserSession>("user")? {
+        let d = &data.storage;
+        let links = d
+            .archived_list(&user_id.user_id)
+            .await
+            .map_err(|e| actix_web::error::ErrorInternalServerError(e))?
+            .into_iter()
+            .map(|url| (url.0.to_string(), url.1.to_string(), url.2))
+            .collect();
+        let json = json!(ListTemplate {
+            app_name: APP_NAME,
+            links: links,
+            user_id: user_id.user_id,
+            page: "archived"
+        });
+        let rendered = &data
+            .hb
+            .render("index", &json)
+            .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
+        Ok(HttpResponse::Ok().body(rendered))
+    } else {
+        Ok(HttpResponse::Forbidden().finish())
+    }
 }
 
 #[delete("/archive/{link_id}")]

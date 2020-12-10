@@ -1,13 +1,10 @@
 use anyhow::{bail, Result};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
-use std::{
-    collections::HashMap,
-    time::{Instant, SystemTime},
-};
+use std::{collections::HashMap, time::Instant};
 use tokio::sync::Mutex;
 
-const auth_token_ttl_secs: u64 = 5 * 60;
+const AUTH_TOKEN_TTL_SECS: u64 = 5 * 60;
 
 pub struct TokenStorage {
     data: Mutex<HashMap<String, (i64, Instant)>>,
@@ -38,12 +35,11 @@ impl TokenStorage {
     }
 
     async fn clean(&self) -> Result<()> {
-        let now = Instant::now();
         let mut data = self.data.lock().await;
         let to_remove: Vec<String> = data
             .iter()
-            .filter_map(|(token, (id, time))| {
-                if time.elapsed().as_secs() > auth_token_ttl_secs {
+            .filter_map(|(token, (_, time))| {
+                if time.elapsed().as_secs() > AUTH_TOKEN_TTL_SECS {
                     Some(token.clone())
                 } else {
                     None

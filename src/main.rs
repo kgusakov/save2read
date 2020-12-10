@@ -4,7 +4,7 @@ mod routes;
 mod storage;
 mod telegram_api;
 
-use actix_session::{CookieSession, Session};
+use actix_session::CookieSession;
 use actix_web::client::Client;
 use actix_web::{web, App, HttpServer};
 use anyhow::*;

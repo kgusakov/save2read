@@ -1,5 +1,3 @@
-use std::str::from_utf8;
-
 use actix_web::client::Client;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
