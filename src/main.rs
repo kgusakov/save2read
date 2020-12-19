@@ -19,6 +19,8 @@ use storage::Storage;
 use telegram_api::*;
 use url::Url;
 
+const TOKEN_TTL: u64 = 120;
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
@@ -34,7 +36,7 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap();
     let storage = Arc::new(Storage::init(db_pool).await.unwrap());
-    let token_storage = Arc::new(TokenStorage::new());
+    let token_storage = Arc::new(TokenStorage::new(TOKEN_TTL));
 
     let st = storage.clone();
     let tt = token_storage.clone();
