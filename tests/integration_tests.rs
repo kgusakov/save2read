@@ -2,10 +2,7 @@ use actix_http::{Error, Request};
 use actix_service::Service;
 use actix_web::body::MessageBody;
 use actix_web::http;
-use actix_web::{
-    dev::ServiceResponse,
-    test, App,
-};
+use actix_web::{dev::ServiceResponse, test, App};
 use handlebars::Handlebars;
 use save2read::auth::*;
 use save2read::routes::*;
@@ -17,7 +14,7 @@ use std::sync::Arc;
 use tempdir::TempDir;
 
 #[actix_rt::test]
-async fn test_index_not_auth() {
+async fn test_index_no_auth() {
     let mut app = app(init_state().await).await;
     let req = test::TestRequest::get().uri("/").to_request();
     let resp = test::call_service(&mut app, req).await;
@@ -29,13 +26,13 @@ async fn test_index_with_auth() {
     let state = init_state().await;
     state
         .token_storage
-        .push(125504090, "token".to_string())
+        .push(1, "token".to_string())
         .await
         .unwrap();
     state
         .storage
         .add(
-            125504090,
+            1,
             &url::Url::parse("http://link").unwrap(),
             Some("Title".to_string()),
         )
@@ -71,6 +68,9 @@ async fn test_index_with_auth() {
     let result = test::call_service(&mut app, authorized_req).await;
 
     assert_eq!(http::StatusCode::OK, result.status());
+    let body = String::from_utf8(test::read_body(result).await.to_vec()).unwrap();
+    assert!(body.contains("http://link"));
+    assert!(!body.contains("http://link1"));
 }
 
 // TODO: This dirty way will lead to leaking one app instance + state per integration test
