@@ -36,9 +36,9 @@ impl Storage {
         Ok(Storage { pool })
     }
 
-    pub async fn add(&self, id: i64, link: &Url, title: Option<String>) -> Result<()> {
+    pub async fn add(&self, user_id: i64, link: &Url, title: Option<String>) -> Result<()> {
         query("INSERT INTO pending_links(user_id, url, title) values(?, ?, ?);")
-            .bind(id)
+            .bind(user_id)
             .bind(link.to_string())
             .bind(title)
             .execute(&self.pool)

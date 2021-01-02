@@ -30,7 +30,7 @@ struct ListTemplate<'a> {
     page: &'a str,
 }
 
-#[get("/")]
+#[get("")]
 pub async fn pending_list(
     data: web::Data<AppState<'_>>,
     session: Session,

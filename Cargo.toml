@@ -4,6 +4,15 @@ version = "0.1.0"
 authors = ["Kirill Gusakov <kgusakov@gmail.com>"]
 edition = "2018"
 
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[lib]
+name = "save2read"
+path = "src/lib.rs"
+
+
 [dependencies]
 actix-web = {version = "3", features = ["rustls"]}
 actix-rt = "1.1.1"
@@ -27,3 +36,6 @@ rand = "0.7.3"
 [dev-dependencies]
 futures = "0.3.8"
 actix-rt = "1.1.1"
+actix-http = "2.2.0"
+actix-service = "1.0.6"
+tempdir = "0.3.7"

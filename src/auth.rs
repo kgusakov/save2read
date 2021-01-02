@@ -88,5 +88,4 @@ mod tests {
         token_storage.push(1, "token".to_string()).await.unwrap();
         assert_eq!(token_storage.pop("token").await.ok(), Some(None));
     }
-
 }
