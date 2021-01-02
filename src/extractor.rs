@@ -43,15 +43,3 @@ pub async fn extract(url: &url::Url) -> Result<Option<String>> {
     let html = Html::parse_document(html_str);
     Ok((title(&html))?)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::extract;
-
-    #[actix_rt::test]
-    async fn it_works() {
-        let url = url::Url::parse("https://docs.rs/sqlx/0.3.5/sqlx/macro.query.html").unwrap();
-        let res = extract(&url).await.unwrap().unwrap();
-        println!("Title: {}", res);
-    }
-}
