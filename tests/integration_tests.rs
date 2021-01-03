@@ -1,4 +1,4 @@
-use actix_http::{Error, Request};
+use actix_http::{cookie::Cookie, Error, Request};
 use actix_service::Service;
 use actix_web::body::MessageBody;
 use actix_web::http;
@@ -24,11 +24,7 @@ async fn test_index_no_auth() {
 #[actix_rt::test]
 async fn test_index_with_auth() {
     let state = init_state().await;
-    state
-        .token_storage
-        .push(1, "token".to_string())
-        .await
-        .unwrap();
+    let token_storage = state.token_storage.clone();
     state
         .storage
         .add(
@@ -49,8 +45,43 @@ async fn test_index_with_auth() {
         .unwrap();
     let mut app = app(state).await;
 
+    let authorized_req = test::TestRequest::get()
+        .cookie(auth(&mut app, &1i64, &token_storage).await)
+        .uri("/")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::OK, result.status());
+    let body = String::from_utf8(test::read_body(result).await.to_vec()).unwrap();
+    assert!(body.contains("http://link"));
+    assert!(!body.contains("http://link1"));
+}
+
+#[actix_rt::test]
+async fn test_archive_wrong_auth() {
+    let state = init_state();
+    let mut app = app(state.await).await;
+    let req = test::TestRequest::get().uri("/").to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(http::StatusCode::FORBIDDEN, resp.status());
+}
+
+async fn auth<'a>(
+    app: &mut impl Service<
+        Request = Request,
+        Response = ServiceResponse<impl MessageBody>,
+        Error = Error,
+    >,
+    user_id: &i64,
+    token_storage: &TokenStorage,
+) -> Cookie<'a> {
+    token_storage
+        .push(user_id.clone(), "token".to_string())
+        .await
+        .unwrap();
+
     let resp = test::call_service(
-        &mut app,
+        app,
         test::TestRequest::get().uri("/auth/token").to_request(),
     )
     .await;
@@ -60,17 +91,7 @@ async fn test_index_with_auth() {
         .map(|v| v.to_str().unwrap().to_owned())
         .last()
         .unwrap();
-
-    let authorized_req = test::TestRequest::get()
-        .cookie(http::Cookie::parse_encoded(cookies).unwrap())
-        .uri("/")
-        .to_request();
-    let result = test::call_service(&mut app, authorized_req).await;
-
-    assert_eq!(http::StatusCode::OK, result.status());
-    let body = String::from_utf8(test::read_body(result).await.to_vec()).unwrap();
-    assert!(body.contains("http://link"));
-    assert!(!body.contains("http://link1"));
+    Cookie::parse_encoded(cookies).unwrap()
 }
 
 // TODO: This dirty way will lead to leaking one app instance + state per integration test
