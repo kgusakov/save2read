@@ -58,12 +58,70 @@ async fn test_index_with_auth() {
 }
 
 #[actix_rt::test]
-async fn test_archive_wrong_auth() {
+async fn test_archive_no_auth() {
     let state = init_state();
     let mut app = app(state.await).await;
-    let req = test::TestRequest::get().uri("/").to_request();
+    let req = test::TestRequest::get().uri("/archived").to_request();
     let resp = test::call_service(&mut app, req).await;
     assert_eq!(http::StatusCode::FORBIDDEN, resp.status());
+}
+
+#[actix_rt::test]
+async fn test_archive_with_auth() {
+    let state = init_state().await;
+    let token_storage = state.token_storage.clone();
+    state
+        .storage
+        .add(
+            1,
+            &url::Url::parse("http://linku1p").unwrap(),
+            Some("Title".to_string()),
+        )
+        .await
+        .unwrap();
+    state
+        .storage
+        .add(
+            1,
+            &url::Url::parse("http://linku1a").unwrap(),
+            Some("Title".to_string()),
+        )
+        .await
+        .unwrap();
+    state.storage.archive(&2).await.unwrap();
+    state
+        .storage
+        .add(
+            2,
+            &url::Url::parse("http://linku2p").unwrap(),
+            Some("Title1".to_string()),
+        )
+        .await
+        .unwrap();
+    state
+        .storage
+        .add(
+            2,
+            &url::Url::parse("http://linku2a").unwrap(),
+            Some("Title1".to_string()),
+        )
+        .await
+        .unwrap();
+    state.storage.archive(&4).await.unwrap();
+    let mut app = app(state).await;
+
+    let authorized_req = test::TestRequest::get()
+        .cookie(auth(&mut app, &1i64, &token_storage).await)
+        .uri("/archived")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::OK, result.status());
+    let body = String::from_utf8(test::read_body(result).await.to_vec()).unwrap();
+    assert!(body.contains("http://linku1a"));
+    assert!(!body.contains("http://linku1p"));
+    assert!(!body.contains("http://linku2p"));
+    assert!(!body.contains("http://linku2a"));
 }
 
 async fn auth<'a>(
