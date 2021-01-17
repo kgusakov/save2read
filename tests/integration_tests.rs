@@ -124,6 +124,15 @@ async fn test_archive_with_auth() {
     assert!(!body.contains("http://linku2a"));
 }
 
+#[actix_rt::test]
+async fn test_do_archive_no_auth() {
+    let state = init_state();
+    let mut app = app(state.await).await;
+    let req = test::TestRequest::post().uri("/archive/1").to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(http::StatusCode::FORBIDDEN, resp.status());
+}
+
 async fn auth<'a>(
     app: &mut impl Service<
         Request = Request,

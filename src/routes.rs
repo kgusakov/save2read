@@ -90,16 +90,21 @@ pub async fn archived_list(
     }
 }
 
-#[delete("/archive/{link_id}")]
+#[post("/archive/{link_id}")]
 pub async fn archive(
     web::Path(link_id): web::Path<i64>,
     data: web::Data<AppState<'_>>,
+    session: Session,
 ) -> std::result::Result<HttpResponse, actix_web::error::Error> {
-    let d = &data.storage;
-    d.archive(&link_id)
-        .await
-        .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
-    Ok(HttpResponse::Ok().finish())
+    if let Some(user_id) = session.get::<UserSession>("user")? {
+        let d = &data.storage;
+        d.archive(&link_id)
+            .await
+            .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
+        Ok(HttpResponse::Ok().finish())
+    } else {
+        Ok(HttpResponse::Forbidden().finish())
+    }
 }
 
 #[delete("/archived/delete/{link_id}")]

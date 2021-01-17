@@ -7,7 +7,7 @@
             <p class="card-text">{{ link.2 }}</p>
             <a href="{{ link.1 }}" target="_blank" class="btn btn-primary">Read</a>
             <div class="btn btn-warning" hx-swap="outerHTML" hx-target="#card-{{ link.0 }}"
-                hx-delete="/archive/{{ link.0 }}">Archive</div>
+                hx-post="/archive/{{ link.0 }}">Archive</div>
             <div class="btn btn-danger" hx-swap="outerHTML" hx-target="#card-{{ link.0 }}"
                 hx-delete="/pending/delete/{{ link.0 }}">Remove</div>
         </div>
