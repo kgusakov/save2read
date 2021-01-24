@@ -47,8 +47,8 @@ impl Storage {
             .map(|_| ())
     }
 
-    pub async fn archive(&self, id: &i64) -> Result<()> {
-        match self.get_url(id).await? {
+    pub async fn archive(&self, id: &i64, user_id: &i64) -> Result<()> {
+        match self.get_pending_url(id, user_id).await? {
             Some((user_id, url, title)) => {
                 query("BEGIN")
                     .execute(&self.pool)
@@ -105,10 +105,38 @@ impl Storage {
         Ok(())
     }
 
-    pub async fn get_url(&self, id: &i64) -> Result<Option<(i64, Url, Option<String>)>> {
+    pub async fn get_pending_url(
+        &self,
+        id: &i64,
+        user_id: &i64,
+    ) -> Result<Option<(i64, Url, Option<String>)>> {
+        Ok(self.get_url(id, PENDING_LINKS_TABLE).await?.and_then(|u| {
+            if &u.0 == user_id {
+                Some(u)
+            } else {
+                None
+            }
+        }))
+    }
+
+    pub async fn get_archived_url(
+        &self,
+        id: &i64,
+        user_id: &i64,
+    ) -> Result<Option<(i64, Url, Option<String>)>> {
+        Ok(self.get_url(id, ARCHIVED_LINKS_TABLE).await?.and_then(|u| {
+            if &u.0 == user_id {
+                Some(u)
+            } else {
+                None
+            }
+        }))
+    }
+
+    async fn get_url(&self, id: &i64, table: &str) -> Result<Option<(i64, Url, Option<String>)>> {
         let rows: Vec<sqlx::sqlite::SqliteRow> = query(&format!(
             "SELECT user_id, url, title from {} where id = ?",
-            PENDING_LINKS_TABLE
+            table
         ))
         .bind(id)
         .fetch_all(&self.pool)

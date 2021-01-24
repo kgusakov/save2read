@@ -96,9 +96,9 @@ pub async fn archive(
     data: web::Data<AppState<'_>>,
     session: Session,
 ) -> std::result::Result<HttpResponse, actix_web::error::Error> {
-    if let Some(user_id) = session.get::<UserSession>("user")? {
+    if let Some(user) = session.get::<UserSession>("user")? {
         let d = &data.storage;
-        d.archive(&link_id)
+        d.archive(&link_id, &user.user_id)
             .await
             .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
         Ok(HttpResponse::Ok().finish())
