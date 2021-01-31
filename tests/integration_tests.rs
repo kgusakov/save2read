@@ -8,7 +8,7 @@ use save2read::auth::*;
 use save2read::routes::*;
 use save2read::storage::*;
 use save2read::*;
-use sqlx::{Executor, sqlite::SqlitePoolOptions};
+use sqlx::{sqlite::SqlitePoolOptions, Executor};
 use std::fs::File;
 use std::sync::Arc;
 use tempdir::TempDir;
@@ -202,12 +202,16 @@ async fn create_article(storage: &Storage, user_id: i64, url: &str, title: &str)
     let article = ArticleData {
         user_id,
         url: url::Url::parse(&url).unwrap(),
-        title: Some(title.to_string()), 
+        title: Some(title.to_string()),
     };
     storage.add(article).await.unwrap()
 }
 
 async fn create_archived_article(storage: &Storage, user_id: i64, url: &str, title: &str) -> i64 {
     let pending_id = create_article(storage, user_id, url, title).await;
-    storage.archive(&user_id, &pending_id).await.unwrap().unwrap()
+    storage
+        .archive(&user_id, &pending_id)
+        .await
+        .unwrap()
+        .unwrap()
 }

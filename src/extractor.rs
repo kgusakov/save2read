@@ -39,7 +39,7 @@ pub async fn extract(url: &url::Url) -> Result<Option<String>> {
         .await?
         .to_vec();
     let html_str =
-        from_utf8(&resp).with_context(|| format!("Can't convert byte response to string"))?;
+        from_utf8(&resp).with_context(|| "Can't convert byte response to string".to_string())?;
     let html = Html::parse_document(html_str);
     Ok((title(&html))?)
 }

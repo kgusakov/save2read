@@ -90,8 +90,8 @@ pub async fn process_update<'a>(
                 storage
                     .add(ArticleData {
                         user_id: update.message.chat.id,
-                        url: url,
-                        title: title
+                        url,
+                        title,
                     })
                     .await?;
                 telegram_api

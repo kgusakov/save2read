@@ -39,13 +39,13 @@ pub async fn pending_list(
         let links = d
             .pending_list(&user_id.user_id)
             .await
-            .map_err(|e| actix_web::error::ErrorInternalServerError(e))?
+            .map_err(actix_web::error::ErrorInternalServerError)?
             .into_iter()
             .map(|url| (url.0.to_string(), url.1.to_string(), url.2))
             .collect();
         let json = json!(ListTemplate {
             app_name: APP_NAME,
-            links: links,
+            links,
             user_id: user_id.user_id,
             page: "pending"
         });
@@ -75,7 +75,7 @@ pub async fn archived_list(
             .collect();
         let json = json!(ListTemplate {
             app_name: APP_NAME,
-            links: links,
+            links,
             user_id: user_id.user_id,
             page: "archived"
         });
@@ -136,12 +136,11 @@ pub async fn delete_archived(
 pub async fn delete_pending(
     web::Path(link_id): web::Path<i64>,
     data: web::Data<AppState<'_>>,
-    session: Session
+    session: Session,
 ) -> std::result::Result<HttpResponse, actix_web::error::Error> {
     if let Some(user) = session.get::<UserSession>("user")? {
         let d = &data.storage;
-        d
-            .delete_pending(&user.user_id, &link_id)
+        d.delete_pending(&user.user_id, &link_id)
             .await
             .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
         Ok(HttpResponse::Ok().finish())

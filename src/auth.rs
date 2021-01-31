@@ -13,7 +13,7 @@ impl TokenStorage {
     pub fn new(token_ttl_secs: u64) -> TokenStorage {
         TokenStorage {
             data: Mutex::new(HashMap::new()),
-            token_ttl_secs: token_ttl_secs,
+            token_ttl_secs,
         }
     }
 

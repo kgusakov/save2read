@@ -4,8 +4,8 @@ use sqlx::Row;
 use sqlx::{query, Pool};
 use url::Url;
 
-pub static PENDING_LINKS_TABLE: &'static str = "pending_links";
-pub static ARCHIVED_LINKS_TABLE: &'static str = "archived_links";
+pub static PENDING_LINKS_TABLE: &str = "pending_links";
+pub static ARCHIVED_LINKS_TABLE: &str = "archived_links";
 
 pub struct Storage {
     pool: Pool<Sqlite>,
@@ -13,14 +13,14 @@ pub struct Storage {
 
 pub struct Article {
     pub id: i64,
-    pub data: ArticleData
+    pub data: ArticleData,
 }
 
 #[derive(Clone)]
 pub struct ArticleData {
     pub user_id: i64,
     pub url: Url,
-    pub title: Option<String>
+    pub title: Option<String>,
 }
 
 impl Storage {
@@ -99,7 +99,7 @@ impl Storage {
                     Ok(None)
                 }
             }
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 
@@ -117,12 +117,15 @@ impl Storage {
     }
 
     pub async fn delete_pending(&self, user_id: &i64, id: &i64) -> Result<()> {
-        query(&format!("DELETE FROM {} where id = ? and user_id = ?", PENDING_LINKS_TABLE))
-            .bind(id)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await
-            .with_context(|| format!("Can't delete the link {} from pending", id))?;
+        query(&format!(
+            "DELETE FROM {} where id = ? and user_id = ?",
+            PENDING_LINKS_TABLE
+        ))
+        .bind(id)
+        .bind(user_id)
+        .execute(&self.pool)
+        .await
+        .with_context(|| format!("Can't delete the link {} from pending", id))?;
         Ok(())
     }
 
@@ -146,15 +149,17 @@ impl Storage {
 
         match rows.first() {
             Some(u) => Ok(Some(ArticleData {
-                    user_id: u.try_get("user_id")
-                        .with_context(|| format!("Can't get field user_id from db"))?,
-                    url: u.try_get("url")
-                        .with_context(|| format!("No field url in the result"))
-                        .and_then(|u| {
-                            Url::parse(u).with_context(|| format!("Can't parse url received from db"))
-                        })?,
-                    title: u.try_get::<Option<String>, &str>("title")?,
-                })),
+                user_id: u
+                    .try_get("user_id")
+                    .with_context(|| format!("Can't get field user_id from db"))?,
+                url: u
+                    .try_get("url")
+                    .with_context(|| format!("No field url in the result"))
+                    .and_then(|u| {
+                        Url::parse(u).with_context(|| format!("Can't parse url received from db"))
+                    })?,
+                title: u.try_get::<Option<String>, &str>("title")?,
+            })),
             None => Ok(None),
         }
     }
