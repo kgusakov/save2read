@@ -8,7 +8,7 @@ use save2read::auth::*;
 use save2read::routes::*;
 use save2read::storage::*;
 use save2read::*;
-use sqlx::{sqlite::SqlitePoolOptions, Executor};
+use sqlx::sqlite::SqlitePoolOptions;
 use std::fs::File;
 use std::sync::Arc;
 use tempdir::TempDir;
@@ -137,6 +137,60 @@ async fn test_delete_pending_incorrect_auth() {
 
     assert_eq!(http::StatusCode::OK, result.status());
     assert_eq!(1, storage.pending_list(&1).await.unwrap().len());
+}
+
+#[actix_rt::test]
+async fn test_delete_pending_correct_auth() {
+    let state = init_state().await;
+    let token_storage = state.token_storage.clone();
+    let storage = state.storage.clone();
+    create_article(&state.storage, 1, "http://linku1p", "Title").await;
+    let mut app = app(state).await;
+
+    let authorized_req = test::TestRequest::delete()
+        .cookie(auth(&mut app, &1i64, &token_storage).await)
+        .uri("/pending/delete/1")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::OK, result.status());
+    assert_eq!(0, storage.pending_list(&1).await.unwrap().len());
+}
+
+#[actix_rt::test]
+async fn test_delete_archived_incorrect_auth() {
+    let state = init_state().await;
+    let token_storage = state.token_storage.clone();
+    let storage = state.storage.clone();
+    create_archived_article(&state.storage, 1, "http://linku1a", "Title").await;
+    let mut app = app(state).await;
+
+    let authorized_req = test::TestRequest::delete()
+        .cookie(auth(&mut app, &2i64, &token_storage).await)
+        .uri("/archived/delete/1")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::OK, result.status());
+    assert_eq!(1, storage.archived_list(&1).await.unwrap().len());
+}
+
+#[actix_rt::test]
+async fn test_delete_archived_correct_auth() {
+    let state = init_state().await;
+    let token_storage = state.token_storage.clone();
+    let storage = state.storage.clone();
+    create_archived_article(&state.storage, 1, "http://linku1a", "Title").await;
+    let mut app = app(state).await;
+
+    let authorized_req = test::TestRequest::delete()
+        .cookie(auth(&mut app, &1i64, &token_storage).await)
+        .uri("/archived/delete/1")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::OK, result.status());
+    assert_eq!(0, storage.archived_list(&1).await.unwrap().len());
 }
 
 async fn auth<'a>(
