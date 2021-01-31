@@ -86,8 +86,13 @@ pub async fn process_update<'a>(
                     })
                     .await?;
             } else if let Ok(url) = Url::parse(&t) {
+                let title = extract(&url).await?;
                 storage
-                    .add(update.message.chat.id, &url, extract(&url).await?)
+                    .add(ArticleData {
+                        user_id: update.message.chat.id,
+                        url: url,
+                        title: title
+                    })
                     .await?;
                 telegram_api
                     .async_send_message(SendMessage {

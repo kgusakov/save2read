@@ -8,7 +8,7 @@ use save2read::auth::*;
 use save2read::routes::*;
 use save2read::storage::*;
 use save2read::*;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::{Executor, sqlite::SqlitePoolOptions};
 use std::fs::File;
 use std::sync::Arc;
 use tempdir::TempDir;
@@ -24,25 +24,9 @@ async fn test_index_no_auth() {
 #[actix_rt::test]
 async fn test_index_with_auth() {
     let state = init_state().await;
+    create_article(&state.storage, 1, "http://link", "Title").await;
+    create_article(&state.storage, 2, "http://link1", "Title1").await;
     let token_storage = state.token_storage.clone();
-    state
-        .storage
-        .add(
-            1,
-            &url::Url::parse("http://link").unwrap(),
-            Some("Title".to_string()),
-        )
-        .await
-        .unwrap();
-    state
-        .storage
-        .add(
-            2,
-            &url::Url::parse("http://link1").unwrap(),
-            Some("Title1".to_string()),
-        )
-        .await
-        .unwrap();
     let mut app = app(state).await;
 
     let authorized_req = test::TestRequest::get()
@@ -70,44 +54,10 @@ async fn test_archive_no_auth() {
 async fn test_archive_with_auth() {
     let state = init_state().await;
     let token_storage = state.token_storage.clone();
-    state
-        .storage
-        .add(
-            1,
-            &url::Url::parse("http://linku1p").unwrap(),
-            Some("Title".to_string()),
-        )
-        .await
-        .unwrap();
-    state
-        .storage
-        .add(
-            1,
-            &url::Url::parse("http://linku1a").unwrap(),
-            Some("Title".to_string()),
-        )
-        .await
-        .unwrap();
-    state.storage.archive(&2, &1).await.unwrap();
-    state
-        .storage
-        .add(
-            2,
-            &url::Url::parse("http://linku2p").unwrap(),
-            Some("Title1".to_string()),
-        )
-        .await
-        .unwrap();
-    state
-        .storage
-        .add(
-            2,
-            &url::Url::parse("http://linku2a").unwrap(),
-            Some("Title1".to_string()),
-        )
-        .await
-        .unwrap();
-    state.storage.archive(&4, &2).await.unwrap();
+    create_article(&state.storage, 1, "http://linku1p", "Title").await;
+    create_archived_article(&state.storage, 1, "http://linku1a", "Title").await;
+    create_article(&state.storage, 2, "http://linku2p", "Title1").await;
+    create_archived_article(&state.storage, 2, "http://linku2a", "Title1").await;
     let mut app = app(state).await;
 
     let authorized_req = test::TestRequest::get()
@@ -138,15 +88,7 @@ async fn test_do_archive_correct_auth() {
     let state = init_state().await;
     let token_storage = state.token_storage.clone();
     let storage = state.storage.clone();
-    state
-        .storage
-        .add(
-            1,
-            &url::Url::parse("http://linku1p").unwrap(),
-            Some("Title".to_string()),
-        )
-        .await
-        .unwrap();
+    create_article(&state.storage, 1, "http://linku1p", "Title").await;
     let mut app = app(state).await;
 
     let authorized_req = test::TestRequest::post()
@@ -165,15 +107,7 @@ async fn test_do_archive_incorrect_auth() {
     let state = init_state().await;
     let token_storage = state.token_storage.clone();
     let storage = state.storage.clone();
-    state
-        .storage
-        .add(
-            1,
-            &url::Url::parse("http://linku1p").unwrap(),
-            Some("Title".to_string()),
-        )
-        .await
-        .unwrap();
+    create_article(&state.storage, 1, "http://linku1p", "Title").await;
     let mut app = app(state).await;
 
     let authorized_req = test::TestRequest::post()
@@ -182,8 +116,26 @@ async fn test_do_archive_incorrect_auth() {
         .to_request();
     let result = test::call_service(&mut app, authorized_req).await;
 
-    assert_eq!(http::StatusCode::OK, result.status());
+    assert_eq!(http::StatusCode::NOT_FOUND, result.status());
     assert_eq!(0, storage.archived_list(&1).await.unwrap().len());
+    assert_eq!(1, storage.pending_list(&1).await.unwrap().len());
+}
+
+#[actix_rt::test]
+async fn test_delete_pending_incorrect_auth() {
+    let state = init_state().await;
+    let token_storage = state.token_storage.clone();
+    let storage = state.storage.clone();
+    create_article(&state.storage, 1, "http://linku1p", "Title").await;
+    let mut app = app(state).await;
+
+    let authorized_req = test::TestRequest::delete()
+        .cookie(auth(&mut app, &2i64, &token_storage).await)
+        .uri("/pending/delete/1")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::OK, result.status());
     assert_eq!(1, storage.pending_list(&1).await.unwrap().len());
 }
 
@@ -237,11 +189,25 @@ async fn init_state<'a>() -> AppState<'a> {
         .connect(dir.to_str().unwrap())
         .await
         .unwrap();
-    let storage = Arc::new(Storage::init(db_pool).await.unwrap());
+    let storage = Arc::new(Storage::init(db_pool.clone()).await.unwrap());
     let token_storage = Arc::new(TokenStorage::new(100));
     AppState {
         storage: storage.clone(),
         token_storage: token_storage.clone(),
         hb: handlebars_ref.clone(),
     }
+}
+
+async fn create_article(storage: &Storage, user_id: i64, url: &str, title: &str) -> i64 {
+    let article = ArticleData {
+        user_id,
+        url: url::Url::parse(&url).unwrap(),
+        title: Some(title.to_string()), 
+    };
+    storage.add(article).await.unwrap()
+}
+
+async fn create_archived_article(storage: &Storage, user_id: i64, url: &str, title: &str) -> i64 {
+    let pending_id = create_article(storage, user_id, url, title).await;
+    storage.archive(&user_id, &pending_id).await.unwrap().unwrap()
 }
