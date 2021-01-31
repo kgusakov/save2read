@@ -18,9 +18,9 @@ async fn main() -> std::io::Result<()> {
         .register_templates_directory(".html", "./templates")
         .unwrap();
     let handlebars_ref = Arc::new(handlebars);
-
+    let db_path = std::env::var("DB_PATH").expect("Provide database path");
     let db_pool = SqlitePoolOptions::new()
-        .connect("sqlite:/tmp/sqlite.db")
+        .connect(&format!("sqlite:{}", &db_path))
         .await
         .unwrap();
     let storage = Arc::new(Storage::init(db_pool).await.unwrap());
