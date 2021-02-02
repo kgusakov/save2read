@@ -166,7 +166,7 @@ impl Storage {
 
     pub async fn pending_list(&self, user_id: &i64) -> Result<Vec<(i64, Url, Option<String>)>> {
         let rows: Vec<sqlx::sqlite::SqliteRow> = query(&format!(
-            "SELECT id, url, title from {} where user_id = ?",
+            "SELECT id, url, title from {} where user_id = ? order by id desc",
             PENDING_LINKS_TABLE
         ))
         .bind(user_id)
@@ -186,7 +186,7 @@ impl Storage {
 
     pub async fn archived_list(&self, user_id: &i64) -> Result<Vec<(i64, Url, Option<String>)>> {
         let rows: Vec<sqlx::sqlite::SqliteRow> = query(&format!(
-            "SELECT id, url, title from {} where user_id = ?",
+            "SELECT id, url, title from {} where user_id = ? order by id desc",
             ARCHIVED_LINKS_TABLE
         ))
         .bind(user_id)
