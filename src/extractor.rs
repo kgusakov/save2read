@@ -69,7 +69,7 @@ async fn ignore_redirects(client: &Client, url: &str, max_redirect: i8) -> Resul
         }
         redirects = redirects - 1;
     }
-    if !resp.status().is_redirection() {
+    if resp.status().is_success() {
         Ok(Some(resp.body().limit(usize::MAX).await?))
     } else {
         Ok(None)
