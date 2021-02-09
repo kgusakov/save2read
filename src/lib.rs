@@ -15,13 +15,15 @@ use routes::*;
 use storage::*;
 use telegram_api::*;
 use url::Url;
+use time::prelude::*;
 
 pub fn configure_app(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/")
             .wrap(
                 CookieSession::signed(&[0; 32]) // <- create cookie based session middleware
-                    .secure(false),
+                    .secure(false)
+                    .expires_in_time(30.days()),
             )
             .service(pending_list)
             .service(archived_list)
