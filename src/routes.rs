@@ -24,7 +24,7 @@ pub struct AppState<'a> {
 #[derive(Serialize, Deserialize, Debug)]
 struct ListTemplate<'a> {
     app_name: &'a str,
-    links: Vec<(String, String, Option<String>)>,
+    links: Vec<(String, String, String)>,
     user_id: i64,
     page: &'a str,
 }
@@ -41,7 +41,7 @@ pub async fn pending_list(
             .await
             .map_err(actix_web::error::ErrorInternalServerError)?
             .into_iter()
-            .map(|url| (url.0.to_string(), url.1.to_string(), url.2))
+            .map(|url| (url.0.to_string(), url.1.to_string(), url.2.unwrap_or(url.1.to_string())))
             .collect();
         let json = json!(ListTemplate {
             app_name: APP_NAME,
@@ -71,7 +71,7 @@ pub async fn archived_list(
             .await
             .map_err(|e| actix_web::error::ErrorInternalServerError(e))?
             .into_iter()
-            .map(|url| (url.0.to_string(), url.1.to_string(), url.2))
+            .map(|url| (url.0.to_string(), url.1.to_string(), url.2.unwrap_or(url.1.to_string())))
             .collect();
         let json = json!(ListTemplate {
             app_name: APP_NAME,
