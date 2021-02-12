@@ -30,7 +30,7 @@ pub async fn extract(url: &url::Url) -> Result<Option<String>> {
     if let Some(data) = ignore_redirects(&client, url.as_str(), 10).await? {
         let resp: Vec<u8> = data.to_vec();
         let html_str = from_utf8(&resp)
-            .with_context(|| "Can't convert byte response to string".to_string())?;
+            .with_context(|| format!("Can't convert byte response to string from url {}", url.as_str()))?;
         let html = Html::parse_document(html_str);
         Ok((title(&html))?)
     } else {
