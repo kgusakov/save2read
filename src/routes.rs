@@ -41,7 +41,13 @@ pub async fn pending_list(
             .await
             .map_err(actix_web::error::ErrorInternalServerError)?
             .into_iter()
-            .map(|url| (url.0.to_string(), url.1.to_string(), url.2.unwrap_or(url.1.to_string())))
+            .map(|url| {
+                (
+                    url.0.to_string(),
+                    url.1.to_string(),
+                    url.2.unwrap_or(url.1.to_string()),
+                )
+            })
             .collect();
         let json = json!(ListTemplate {
             app_name: APP_NAME,
@@ -71,7 +77,13 @@ pub async fn archived_list(
             .await
             .map_err(|e| actix_web::error::ErrorInternalServerError(e))?
             .into_iter()
-            .map(|url| (url.0.to_string(), url.1.to_string(), url.2.unwrap_or(url.1.to_string())))
+            .map(|url| {
+                (
+                    url.0.to_string(),
+                    url.1.to_string(),
+                    url.2.unwrap_or(url.1.to_string()),
+                )
+            })
             .collect();
         let json = json!(ListTemplate {
             app_name: APP_NAME,

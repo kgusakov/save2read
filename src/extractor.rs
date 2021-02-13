@@ -1,11 +1,6 @@
-use std::str::from_utf8;
-
 use actix_web::http;
-use actix_web::{
-    client::Client,
-    web::Bytes,
-};
-use anyhow::{anyhow, Context, Result};
+use actix_web::{client::Client, web::Bytes};
+use anyhow::{anyhow, Result};
 use scraper::{Html, Selector};
 
 fn title(doc: &Html) -> Result<Option<String>> {
@@ -29,9 +24,8 @@ pub async fn extract(url: &url::Url) -> Result<Option<String>> {
     let client = Client::default();
     if let Some(data) = ignore_redirects(&client, url.as_str(), 10).await? {
         let resp: Vec<u8> = data.to_vec();
-        let html_str = from_utf8(&resp)
-            .with_context(|| format!("Can't convert byte response to string from url {}", url.as_str()))?;
-        let html = Html::parse_document(html_str);
+        let html_str = String::from_utf8_lossy(&resp);
+        let html = Html::parse_document(&html_str);
         Ok((title(&html))?)
     } else {
         Ok(None)

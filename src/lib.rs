@@ -14,8 +14,8 @@ use log::error;
 use routes::*;
 use storage::*;
 use telegram_api::*;
-use url::Url;
 use time::prelude::*;
+use url::Url;
 
 pub fn configure_app(cfg: &mut web::ServiceConfig) {
     cfg.service(
