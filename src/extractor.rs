@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use actix_web::http;
 use actix_web::{client::Client, web::Bytes};
 use anyhow::{anyhow, Result};
@@ -21,7 +23,7 @@ fn title(doc: &Html) -> Result<Option<String>> {
 }
 
 pub async fn extract(url: &url::Url) -> Result<Option<String>> {
-    let client = Client::default();
+    let client = Client::builder().timeout(Duration::from_secs(60)).finish();
     if let Some(data) = ignore_redirects(&client, url.as_str(), 10).await? {
         let resp: Vec<u8> = data.to_vec();
         let html_str = String::from_utf8_lossy(&resp);
