@@ -1,5 +1,6 @@
 use actix_web::{web, App, HttpServer};
 use handlebars::Handlebars;
+use openssl_probe::init_ssl_cert_env_vars;
 use routes::*;
 use save2read::auth::TokenStorage;
 use save2read::*;
@@ -12,6 +13,7 @@ const TOKEN_TTL: u64 = 120;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
+    init_ssl_cert_env_vars();
 
     let mut handlebars = Handlebars::new();
     handlebars
