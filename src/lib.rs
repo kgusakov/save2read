@@ -88,7 +88,10 @@ pub async fn process_update<'a>(
                     })
                     .await?;
             } else if let Ok(url) = Url::parse(&t) {
-                let title = extract(&url).await?;
+                let title = extract(&url).await.unwrap_or_else(|e| {
+                    error!("{}", e);
+                    None
+                });
                 storage
                     .add(ArticleData {
                         user_id: update.message.chat.id,
