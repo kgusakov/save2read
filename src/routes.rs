@@ -127,6 +127,32 @@ pub async fn archive(
     }
 }
 
+#[post("/unarchive/{link_id}")]
+pub async fn unarchive(
+    web::Path(link_id): web::Path<i64>,
+    data: web::Data<AppState<'_>>,
+    session: Session,
+) -> std::result::Result<HttpResponse, actix_web::error::Error> {
+    if let Some(user) = session.get::<UserSession>("user")? {
+        let d = &data.storage;
+        let archived_result = d
+            .get_archived_url(&link_id)
+            .await
+            .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
+        match archived_result {
+            Some(link_info) if link_info.user_id == user.user_id => {
+                d.unarchive(&user.user_id, &link_id)
+                    .await
+                    .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
+                Ok(HttpResponse::Ok().finish())
+            }
+            _ => Ok(HttpResponse::NotFound().finish()),
+        }
+    } else {
+        Ok(HttpResponse::Forbidden().finish())
+    }
+}
+
 #[delete("/archived/delete/{link_id}")]
 pub async fn delete_archived(
     web::Path(link_id): web::Path<i64>,

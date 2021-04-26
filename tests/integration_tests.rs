@@ -193,6 +193,53 @@ async fn test_delete_archived_correct_auth() {
     assert_eq!(0, storage.archived_list(&1).await.unwrap().len());
 }
 
+#[actix_rt::test]
+async fn test_do_unarchive_no_auth() {
+    let state = init_state();
+    let mut app = app(state.await).await;
+    let req = test::TestRequest::post().uri("/unarchive/1").to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(http::StatusCode::FORBIDDEN, resp.status());
+}
+
+#[actix_rt::test]
+async fn test_do_unarchive_correct_auth() {
+    let state = init_state().await;
+    let token_storage = state.token_storage.clone();
+    let storage = state.storage.clone();
+    create_archived_article(&state.storage, 1, "http://linku1p", "Title").await;
+    let mut app = app(state).await;
+
+    let authorized_req = test::TestRequest::post()
+        .cookie(auth(&mut app, &1i64, &token_storage).await)
+        .uri("/unarchive/1")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::OK, result.status());
+    assert_eq!(0, storage.archived_list(&1).await.unwrap().len());
+    assert_eq!(1, storage.pending_list(&1).await.unwrap().len());
+}
+
+#[actix_rt::test]
+async fn test_do_unarchive_incorrect_auth() {
+    let state = init_state().await;
+    let token_storage = state.token_storage.clone();
+    let storage = state.storage.clone();
+    create_archived_article(&state.storage, 1, "http://linku1p", "Title").await;
+    let mut app = app(state).await;
+
+    let authorized_req = test::TestRequest::post()
+        .cookie(auth(&mut app, &2i64, &token_storage).await)
+        .uri("/unarchive/1")
+        .to_request();
+    let result = test::call_service(&mut app, authorized_req).await;
+
+    assert_eq!(http::StatusCode::NOT_FOUND, result.status());
+    assert_eq!(1, storage.archived_list(&1).await.unwrap().len());
+    assert_eq!(0, storage.pending_list(&1).await.unwrap().len());
+}
+
 async fn auth<'a>(
     app: &mut impl Service<
         Request = Request,

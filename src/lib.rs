@@ -28,6 +28,7 @@ pub fn configure_app(cfg: &mut web::ServiceConfig) {
             .service(pending_list)
             .service(archived_list)
             .service(archive)
+            .service(unarchive)
             .service(delete_archived)
             .service(delete_pending)
             .service(auth),

@@ -1,14 +1,26 @@
-
-<div class="card-deck">
-    {{#each links as |link|}}
-    <div class="card" id="card-{{ link.0 }}">
-        <div class="card-body">
-            <h5 class="card-title">{{ link.2 }}</h5>
-            <p class="card-text">{{ link.2 }}</p>
-            <a href="{{ link.1 }}" target="_blank" class="btn btn-primary">Read</a>
-            <div class="btn btn-danger" hx-swap="outerHTML" hx-target="#card-{{ link.0 }}"
-                hx-delete="/archived/delete/{{ link.0 }}">Remove</div>
+<main role="main">
+    <div class="album py-5 bg-light">
+        <div class="container">
+            <div class="row">
+                {{#each links as |link|}}
+                <div class="col-md-6" id="card-{{ link.0 }}">
+                    <div class="card mb-5 box-shadow">
+                        <div class="card-body">
+                        <p class="card-text">{{ link.2 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="btn-toolbar">
+                                <div class="btn btn-warning mr-3" hx-swap="outerHTML" hx-target="#card-{{ link.0 }}"
+                                    hx-post="/unarchive/{{ link.0 }}">Unarchive</div>
+                                <div class="btn btn-danger" hx-swap="outerHTML" hx-target="#card-{{ link.0 }}"
+                                    hx-delete="/archived/delete/{{ link.0 }}">Remove</div>
+                            </div>
+                            <a href="{{ link.1 }}" target="_blank" class="btn btn-primary">Read</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
         </div>
     </div>
-    {{/each}}
-</div>
+</main>

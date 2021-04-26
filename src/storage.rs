@@ -103,6 +103,51 @@ impl Storage {
         }
     }
 
+    pub async fn unarchive(&self, user_id: &i64, id: &i64) -> Result<Option<i64>> {
+        match self.get_archived_url(id).await? {
+            Some(article_data) => {
+                if &article_data.user_id == user_id {
+                    query("BEGIN").execute(&self.pool).await.with_context(|| {
+                        format!("Can't start db transaction for unarchive item")
+                    })?;
+
+                    let pending_id = query(&format!(
+                        "INSERT INTO {}(user_id, url, title) values(?, ?, ?);",
+                        PENDING_LINKS_TABLE
+                    ))
+                    .bind(article_data.user_id)
+                    .bind(article_data.url.to_string())
+                    .bind(article_data.title.clone())
+                    .execute(&self.pool)
+                    .await
+                    .with_context(|| {
+                        format!("Can't insert link to move it to pending from archive")
+                    })
+                    .map(|done| done.last_insert_rowid())?;
+
+                    query(&format!("DELETE FROM {} where id = ?", ARCHIVED_LINKS_TABLE))
+                        .bind(id)
+                        .execute(&self.pool)
+                        .await
+                        .with_context(|| {
+                            format!("Can't delete the link from storage to move it to pending from archived")
+                        })?;
+                    query("COMMIT").execute(&self.pool).await.with_context(|| {
+                        format!(
+                            "Can't commit transaction for unarchive the item {} for user {}",
+                            article_data.url.to_string(),
+                            article_data.user_id
+                        )
+                    })?;
+                    Ok(Some(pending_id))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
     pub async fn delete_archived(&self, user_id: &i64, id: &i64) -> Result<()> {
         query(&format!(
             "DELETE FROM {} where id = ? and user_id = ?",
